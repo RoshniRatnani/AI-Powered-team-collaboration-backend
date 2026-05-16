@@ -4,10 +4,105 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  created_at    DateTime       @default(now())
+
+  projects       Project[]
+  assigned_tasks Task[]
+  comments       Comment[]
+  notifications  Notification[]
+
+  @@map("users")
+}
+
+model Project {
+  id           String    @id @default(uuid())
+  name         String
+  description  String?
+  created_by   String
+  created_at   DateTime  @default(now())
+
+  creator User @relation(fields: [created_by], references: [id], onDelete: Cascade)
+
+  tasks Task[]
+
+  @@map("projects")
+}
+
+model Task {
+  id           String        @id @default(uuid())
+  title        String
+  description  String?
+  status       TaskStatus    @default(TODO)
+  priority     TaskPriority  @default(MEDIUM)
+
+  project_id   String
+  assigned_to  String?
+
+  created_at   DateTime      @default(now())
+
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  assignee User? @relation(fields: [assigned_to], references: [id])
+
+  comments Comment[]
+
+  @@map("tasks")
+}
+
+model Comment {
+  id          String    @id @default(uuid())
+
+  task_id     String
+  user_id     String
+
+  message     String
+
+  created_at  DateTime  @default(now())
+
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+
+  user_id     String
+
+  message     String
+
+  is_read     Boolean   @default(false)
+
+  created_at  DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
